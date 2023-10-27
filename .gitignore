@@ -67,3 +67,7 @@ ctrlp.root
 *.html
 Debug/
 Release/
+
+#backups KiCad
+esquemáticos/H-Bridge/H-Bridge-backups
+esquemáticos/fuente_conmutada_pruebas/fuente_conmutada_pruebas-backups
