@@ -1,0 +1,10 @@
+16:34:18 **** Incremental Build of configuration Debug for project abg_uart_polling ****
+make -j12 all 
+arm-none-eabi-size   abg_uart_polling.elf 
+   text	   data	    bss	    dec	    hex	filename
+   9256	     20	   1636	  10912	   2aa0	abg_uart_polling.elf
+Finished building: default.size.stdout
+ 
+
+16:34:19 Build Finished. 0 errors, 0 warnings. (took 488ms)
+
