@@ -144,3 +144,4 @@ USART2.VirtualMode=VM_ASYNC
 board=STM32F411E-DISCO
 boardIOC=true
 isbadioc=false
+isbadioc=false

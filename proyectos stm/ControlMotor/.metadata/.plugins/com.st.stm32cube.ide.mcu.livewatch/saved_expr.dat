@@ -6,3 +6,5 @@ oldpos
 position
 sendCode
 recievedCode
+joystick
+adcValues
