@@ -18,7 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include <math.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -66,7 +66,7 @@ int16_t count; //PErmite controlar el overflow. cuando hace overflow cambia de s
 //Ver cuantos clicks esta contando por cada vez que aumenta el counter
 int16_t position=0;
 int speed = 0;
-
+volatile int8_t cplt_rx_flag=0;
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 	counter= __HAL_TIM_GET_COUNTER(htim);
 	count=(int16_t)counter;
@@ -74,6 +74,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+	cplt_rx_flag=1;
     HAL_UART_Receive_IT(&huart2, &joystick, 1);
 }
 /* USER CODE END 0 */
@@ -130,6 +131,14 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+	 if(cplt_rx_flag==1)
+	 {
+		 cplt_rx_flag=0;
+		 //Mejorar respuesta del motor ante cambios de consigna --> la respuesta original es no lineal
+		 float correctionVal = 255 * log2(joystick + 1) / log2f(256) ;
+		 __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2,(int) correctionVal);
+	 }
 
 
 
