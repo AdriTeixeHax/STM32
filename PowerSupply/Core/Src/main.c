@@ -42,6 +42,7 @@
 
 #define VOLTAGE_SET_POINT 7.41 // VOLTAGE_SET_POINT = 7.41V
 #define SET_POINT VOLTAGE_SET_POINT * VOLTS_TO_BITS
+#define T_CONTROLLER 50 // In ms
 
 /* USER CODE END PD */
 
@@ -56,13 +57,16 @@ DMA_HandleTypeDef hdma_adc1;
 
 TIM_HandleTypeDef htim1;
 
+UART_HandleTypeDef huart6;
+
 /* USER CODE BEGIN PV */
 
-uint16_t adcValues[2];
+uint16_t adcValues[3];
 uint16_t pwmOutput = 0;
 
 float error;
 float voltage;
+uint8_t joystick;
 
 /* USER CODE END PV */
 
@@ -72,6 +76,7 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_USART6_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -84,9 +89,12 @@ bool convCpltFlag = false;
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
   convCpltFlag = true;
-
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcValues, 2);
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcValues, 3);
 }
+
+//void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+ //   HAL_UART_Transmit_IT(&huart6, &joystick, 1);
+//}
 
 /* USER CODE END 0 */
 
@@ -103,8 +111,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-
-	HAL_Init();
+  HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -122,9 +129,10 @@ int main(void)
   MX_DMA_Init();
   MX_ADC1_Init();
   MX_TIM1_Init();
+  MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcValues, 2);
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcValues, 3);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 
   /* USER CODE END 2 */
@@ -134,10 +142,11 @@ int main(void)
 
   uint8_t movAvgLen = 0;
   uint16_t movAvgSum = 0;
-
+  //HAL_UART_Transmit_IT(&huart6, &joystick, 1);
   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
 
   uint64_t pastTime = 0;
+  uint64_t pastTimeCom = 0;
 
   while (1)
   {
@@ -145,8 +154,16 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
+	if (HAL_GetTick() > pastTimeCom + T_CONTROLLER)
+	{
+		pastTimeCom = HAL_GetTick();
+		HAL_UART_Transmit_IT(&huart6, &joystick, 1);
+	}
+
 	if (convCpltFlag)
 	{
+		joystick = adcValues[2] / 16;
+
 		if (HAL_GetTick() > pastTime + 1)
 		{
 			pastTime = HAL_GetTick();
@@ -244,7 +261,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 2;
+  hadc1.Init.NbrOfConversion = 3;
   hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -266,6 +283,15 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = 2;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_2;
+  sConfig.Rank = 3;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -352,6 +378,39 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief USART6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART6_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART6_Init 0 */
+
+  /* USER CODE END USART6_Init 0 */
+
+  /* USER CODE BEGIN USART6_Init 1 */
+
+  /* USER CODE END USART6_Init 1 */
+  huart6.Instance = USART6;
+  huart6.Init.BaudRate = 38400;
+  huart6.Init.WordLength = UART_WORDLENGTH_8B;
+  huart6.Init.StopBits = UART_STOPBITS_1;
+  huart6.Init.Parity = UART_PARITY_NONE;
+  huart6.Init.Mode = UART_MODE_TX_RX;
+  huart6.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart6.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART6_Init 2 */
+
+  /* USER CODE END USART6_Init 2 */
+
+}
+
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -380,6 +439,7 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOE_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
