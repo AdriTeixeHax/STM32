@@ -34,10 +34,14 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define movAvgLen 3 // Range 0 to 255
+#define VOLTS_TO_BITS 376.379f // VOLTS_TO_BITS = 4095 / Vref * BridgeVoltageFraction ;
+							   // Vref = 2.72V ,
+							   // BridgeVoltageFraction = 0.25 = 100k / (100k + 300k)
 
-#define VOLTAGE_SET_POINT 7.41 // Vo = 7.41 V
-#define SET_POINT VOLTAGE_SET_POINT * 289.132 // 289.132 = 4095 / 3.3 * 0.233
+#define BITS_TO_VOLTS 0.00265689866f // BITS_TO_BOLTS = 1 / VOLTS_TO_BITS
+
+#define VOLTAGE_SET_POINT 7.41 // VOLTAGE_SET_POINT = 7.41V
+#define SET_POINT VOLTAGE_SET_POINT * VOLTS_TO_BITS
 
 /* USER CODE END PD */
 
@@ -55,8 +59,9 @@ TIM_HandleTypeDef htim1;
 /* USER CODE BEGIN PV */
 
 uint16_t adcValues[2];
-int16_t pwmOutput = 0;
+uint16_t pwmOutput = 0;
 
+float error;
 float voltage;
 
 /* USER CODE END PV */
@@ -98,7 +103,8 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+
+	HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -119,16 +125,19 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcValues, 2);
-  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_4);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  bool movAvgBufFull = false;
-  uint8_t movAvgIndex = 0;
-  uint16_t movAvgBuf[movAvgLen];
+  uint8_t movAvgLen = 0;
+  uint16_t movAvgSum = 0;
+
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+
+  uint64_t pastTime = 0;
 
   while (1)
   {
@@ -138,29 +147,28 @@ int main(void)
 
 	if (convCpltFlag)
 	{
-		movAvgBuf[movAvgIndex] = adcValues[0] - adcValues[1];
-
-		if (++movAvgIndex == movAvgLen)
+		if (HAL_GetTick() > pastTime + 1)
 		{
-			movAvgBufFull = true;
-			movAvgIndex = 0;
+			pastTime = HAL_GetTick();
+
+			uint16_t voltageInBits = movAvgSum / movAvgLen;
+			voltage = voltageInBits * BITS_TO_VOLTS;
+
+			int16_t errorInBits = voltageInBits - SET_POINT;
+			error = errorInBits * BITS_TO_VOLTS;
+
+			pwmOutput -= errorInBits;
+			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, pwmOutput);
+
+			movAvgSum = 0;
+			movAvgLen = 0;
 		}
 
-		if (movAvgBufFull)
-		{
-			uint32_t aux = 0;
-			for(int i = 0; i < movAvgLen; i++)
-				aux += movAvgBuf[i];
-
-			pwmOutput = aux / movAvgLen - SET_POINT;
-		}
+		movAvgSum += adcValues[1] - adcValues[0];
+		movAvgLen++;
 
 		convCpltFlag = false;
 	}
-
-	voltage = pwmOutput / 289.132;
-
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, pwmOutput);
 
   }
   /* USER CODE END 3 */
@@ -280,6 +288,7 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 0 */
 
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
   TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
@@ -288,12 +297,21 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 4095;
+  htim1.Init.Prescaler = 7;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 6;
+  htim1.Init.Period = 4095;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
   {
     Error_Handler();
@@ -307,10 +325,11 @@ static void MX_TIM1_Init(void)
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
   }

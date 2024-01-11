@@ -247,7 +247,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "DC Motor Driver.kicad_pro",
+    "filename": "fuente_conmutada_pruebas.kicad_pro",
     "version": 1
   },
   "net_settings": {
@@ -274,7 +274,11 @@
       "version": 3
     },
     "net_colors": null,
-    "netclass_assignments": null,
+    "netclass_assignments": {
+      "Net-(C1-Pad1)": "PA0",
+      "Net-(C2-Pad1)": "PA1",
+      "OSC 1": "PE9"
+    },
     "netclass_patterns": []
   },
   "pcbnew": {
