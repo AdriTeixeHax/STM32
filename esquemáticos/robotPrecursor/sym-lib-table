@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "generic")(type "KiCad")(uri "C:/Users/adria/Documents/GitHub/STM32/esquemáticos/lib/generic.kicad_sym")(options "")(descr ""))
+)
