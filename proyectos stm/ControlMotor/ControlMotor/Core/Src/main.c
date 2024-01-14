@@ -46,7 +46,7 @@ TIM_HandleTypeDef htim2;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+#define clickVuelta 48
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,6 +57,7 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 uint8_t joystick;
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -70,7 +71,7 @@ volatile int8_t cplt_rx_flag=0;
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 	counter= __HAL_TIM_GET_COUNTER(htim);
 	count=(int16_t)counter;
-	position=count/48; //48 vueltas por segundo?
+	position=count/clickVuelta; //48 vueltas por segundo?
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {

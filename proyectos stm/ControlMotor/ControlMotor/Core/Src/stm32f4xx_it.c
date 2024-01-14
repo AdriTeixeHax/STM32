@@ -191,7 +191,7 @@ void SysTick_Handler(void)
   /* USER CODE BEGIN SysTick_IRQn 0 */
 
 	indx++;
-	//La velocidad se actualiza cada 250 ms
+	//La velocidad se actualiza cada 500 ms
 	if (indx==500){
 		speed=((position-oldpos)*2); //velocidad en revoluciones/s
 		oldpos=position;
