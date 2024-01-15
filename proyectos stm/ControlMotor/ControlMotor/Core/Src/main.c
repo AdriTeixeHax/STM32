@@ -71,7 +71,7 @@ volatile int8_t cplt_rx_flag=0;
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 	counter= __HAL_TIM_GET_COUNTER(htim);
 	count=(int16_t)counter;
-	position=count/clickVuelta; //48 vueltas por segundo?
+	position=count/clickVuelta; //48 clicks por vuelta?
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
