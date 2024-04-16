@@ -66,12 +66,14 @@ uint32_t counter=0;
 int16_t count; //PErmite controlar el overflow. cuando hace overflow cambia de signo
 //Ver cuantos clicks esta contando por cada vez que aumenta el counter
 int16_t position=0;
-int speed = 0;
+int speed[4] = 0;
+int actualSpeed = 0;
+
 volatile int8_t cplt_rx_flag=0;
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
 	counter= __HAL_TIM_GET_COUNTER(htim);
-	count=(int16_t)counter;
-	position=count/clickVuelta; //48 clicks por vuelta?
+	count=(int16_t)counter; // To have + and - values (ccw and cw)
+	position=count/clicksPerTurn; // Turns
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {

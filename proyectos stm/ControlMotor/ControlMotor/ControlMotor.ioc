@@ -161,3 +161,4 @@ VP_SYS_VS_Systick.Signal=SYS_VS_Systick
 board=STM32F411E-DISCO
 boardIOC=true
 isbadioc=false
+isbadioc=false

@@ -42,19 +42,35 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 
+int indx =0; //Keep track of miliseconds
+int16_t oldpos=0;
+#define speedVectorCount 4
+#define movingAvgDelay 125
+
+uint8_t movingAvgIterator = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
 
+int average(int* data, uint8_t size)
+{
+	int result = 0;
+	int i = 0;
+
+	for (; i < speedVectorCount; i++)
+	{
+		result += data[i]/speedVectorCount;
+	}
+
+	return result;
+}
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-extern int speed;
-int indx =0; //Keep track of miliseconds
-extern int16_t position;
-int16_t oldpos=0;
 
 
 /* USER CODE END 0 */
@@ -62,6 +78,11 @@ int16_t oldpos=0;
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim2;
 extern UART_HandleTypeDef huart2;
+
+extern int speed[speedVectorCount];
+extern int actualSpeed;
+extern int16_t position;
+
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -191,11 +212,15 @@ void SysTick_Handler(void)
   /* USER CODE BEGIN SysTick_IRQn 0 */
 
 	indx++;
-	//La velocidad se actualiza cada 500 ms
-	if (indx==500){
-		speed=((position-oldpos)*2); //velocidad en revoluciones/s
-		oldpos=position;
-		indx=0;
+
+	if (indx == movingAvgDelay){ //La velocidad se actualiza cada 500 ms
+
+		movingAvgIterator = (movingAvgIterator + 1) % speedVectorCount;
+		speed[i] = ((position - oldpos) * 2);
+
+		actualSpeed = average(speed, speedVectorCount);
+		oldpos = position;
+		indx = 0;
 	}
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
