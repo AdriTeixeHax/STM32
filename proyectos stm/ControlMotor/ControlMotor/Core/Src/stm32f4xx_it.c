@@ -46,6 +46,7 @@ int indx =0; //Keep track of miliseconds
 int16_t oldpos=0;
 #define speedVectorCount 4
 #define movingAvgDelay 125
+#define clicksPerTurn 48
 
 uint8_t movingAvgIterator = 0;
 
@@ -213,12 +214,12 @@ void SysTick_Handler(void)
 
 	indx++;
 
-	if (indx == movingAvgDelay){ //La velocidad se actualiza cada 500 ms
+	if (indx == movingAvgDelay){
 
 		movingAvgIterator = (movingAvgIterator + 1) % speedVectorCount;
-		speed[i] = ((position - oldpos) * 2);
+		speed[movingAvgIterator] = ((position - oldpos) / (movingAvgDelay / 1000));
 
-		actualSpeed = average(speed, speedVectorCount);
+		actualSpeed = average(speed, speedVectorCount) / clicksPerTurn;
 		oldpos = position;
 		indx = 0;
 	}
